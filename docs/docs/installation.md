@@ -160,6 +160,61 @@ docker run -d \
   blakeblackshear/frigate:<specify_version_tag>
 ```
 
+### Users
+To run as a specific user, fill-in both the user and group ids like so:
+docker cli:
+```bash
+docker run -d \
+  --name frigate \
+  --restart=unless-stopped \
+  --mount type=tmpfs,target=/tmp/cache,tmpfs-size=1000000000 \
+  --device /dev/bus/usb:/dev/bus/usb \
+  --device /dev/dri/renderD128 \
+  --shm-size=64m \
+  -v /path/to/your/storage:/media/frigate \
+  -v /path/to/your/config.yml:/config/config.yml:ro \
+  -v /etc/localtime:/etc/localtime:ro \
+  -e FRIGATE_RTSP_PASSWORD='password' \
+  -e PUID=1000 \
+  -e PGID=1000 \
+  -p 5000:5000 \
+  -p 1935:1935 \
+  blakeblackshear/frigate:<specify_version_tag>
+```
+
+docker-compose:
+```yaml
+version: "3.9"
+services:
+  frigate:
+    container_name: frigate
+    privileged: true # this may not be necessary for all setups
+    restart: unless-stopped
+    image: blakeblackshear/frigate:<specify_version_tag>
+    shm_size: "64mb" # update for your cameras based on calculation above
+    devices:
+      - /dev/bus/usb:/dev/bus/usb # passes the USB Coral, needs to be modified for other versions
+      - /dev/apex_0:/dev/apex_0 # passes a PCIe Coral, follow driver instructions here https://coral.ai/docs/m2/get-started/#2a-on-linux
+      - /dev/dri/renderD128 # for intel hwaccel, needs to be updated for your hardware
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /path/to/your/config.yml:/config/config.yml:ro
+      - /path/to/your/storage:/media/frigate
+      - type: tmpfs # Optional: 1GB of memory, reduces SSD/SD Card wear
+        target: /tmp/cache
+        tmpfs:
+          size: 1000000000
+    ports:
+      - "5000:5000"
+      - "1935:1935" # RTMP feeds
+    environment:
+      FRIGATE_RTSP_PASSWORD: "password"
+      PUID: 1000
+      PGID: 1000
+```
+more information about these can be read via the linuxserver.io docs:
+[linuxserver.io PUID/PGID docs](https://docs.linuxserver.io/general/understanding-puid-and-pgid)
+
 ## Home Assistant Operating System (HassOS)
 
 :::caution
