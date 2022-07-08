@@ -12,7 +12,7 @@ from collections import defaultdict
 from typing import Dict, List
 
 import numpy as np
-from cv2 import cv2, reduce
+import cv2
 from setproctitle import setproctitle
 
 from frigate.config import CameraConfig, DetectConfig
