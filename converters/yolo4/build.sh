@@ -3,8 +3,8 @@
 mkdir -p $(pwd)/model
 mkdir -p $(pwd)/plugin
 
-docker build --tag models.yolo4  --file ./Dockerfile.l4t.tf15 ./assets/
-
+docker build --tag models.yolo4  --file ./Dockerfile.l4t.tf15 ./assets/ \
+ && \
 sudo docker run --rm -it --name models.yolo4 \
     --mount type=tmpfs,target=/tmp/cache,tmpfs-size=1000000000 \
     -v $(pwd)/model:/model:rw \
