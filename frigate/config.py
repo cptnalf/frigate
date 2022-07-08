@@ -620,10 +620,13 @@ class CameraConfig(FrigateBaseModel):
             }
 
         # add roles to the input if there is only one
-        if "ffmpeg" in config:
+        if "ffmpeg" in config and "inputs" in config["ffmpeg"]:
             if len(config["ffmpeg"]["inputs"]) == 1:
                 config["ffmpeg"]["inputs"][0]["roles"] = ["record", "rtmp", "detect"]
-
+        if "gstreamer" in config and "inputs" in config["gstreamer"]:
+            if len(config["gstreamer"]["inputs"]) == 1:
+                config["gstreamer"]["inputs"][0]["roles"] = ["record", "rtmp", "detect"]
+        
         super().__init__(**config)
 
     @property
@@ -961,9 +964,20 @@ class FrigateConfig(FrigateBaseModel):
                 camera_config.detect.stationary.threshold = stationary_threshold
 
             # FFMPEG input substitution
-            if "ffmpeg" in camera_config:
+            if "ffmpeg" in camera_config.dict() \
+                and camera_config.ffmpeg is not None \
+                and "inputs" in camera_config.ffmpeg.dict():
                 for input in camera_config.ffmpeg.inputs:
                     input.path = input.path.format(**FRIGATE_ENV_VARS)
+                    logger.warning(f"ffmpeg input: {name} {input.path}")
+
+            # gstreamer input substitution
+            if "gstreamer" in camera_config.dict() \
+                and camera_config.gstreamer is not None \
+                and "inputs" in camera_config.gstreamer.dict():
+                for input in camera_config.gstreamer.inputs:
+                    input.path = input.path.format(**FRIGATE_ENV_VARS)
+                    logger.warning(f"gstreamer input: {name} {input.path}")
 
             # Add default filters
             object_keys = camera_config.objects.track
