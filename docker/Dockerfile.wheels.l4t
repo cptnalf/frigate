@@ -1,4 +1,4 @@
-FROM timongentzsch/l4t-ubuntu20-base:latest
+FROM cptnalf/ubuntu-l4t:focal-r32.7.1
 
 ARG PYTHON_MINOR_VERSION=8
 

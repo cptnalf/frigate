@@ -1,0 +1,7 @@
+FROM node:16 as web
+
+WORKDIR /opt/frigate
+
+COPY web/ .
+
+RUN npm install && npm run build
