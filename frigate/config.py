@@ -969,15 +969,20 @@ class FrigateConfig(FrigateBaseModel):
                 and "inputs" in camera_config.ffmpeg.dict():
                 for input in camera_config.ffmpeg.inputs:
                     input.path = input.path.format(**FRIGATE_ENV_VARS)
-                    logger.warning(f"ffmpeg input: {name} {input.path}")
 
             # gstreamer input substitution
             if "gstreamer" in camera_config.dict() \
-                and camera_config.gstreamer is not None \
-                and "inputs" in camera_config.gstreamer.dict():
-                for input in camera_config.gstreamer.inputs:
-                    input.path = input.path.format(**FRIGATE_ENV_VARS)
-                    logger.warning(f"gstreamer input: {name} {input.path}")
+                and camera_config.gstreamer is not None:
+                
+                if "inputs" in camera_config.gstreamer.dict():
+                    for input in camera_config.gstreamer.inputs:
+                        input.path = input.path.format(**FRIGATE_ENV_VARS)
+
+                        if input.raw_pipeline is not None:
+                            input.raw_pipeline = [
+                                item.format(**FRIGATE_ENV_VARS)
+                                for item in input.raw_pipeline
+                            ]
 
             # Add default filters
             object_keys = camera_config.objects.track
