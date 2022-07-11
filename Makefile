@@ -1,7 +1,7 @@
 default_target: frigate
 
 COMMIT_HASH := $(shell git log -1 --pretty=format:"%h"|tail -1)
-FRIGATE_VERSION := '0.11.0-$(COMMIT_HASH)'
+FRIGATE_VERSION := '0.11'
 
 version:
 	echo "VERSION='0.11.0-$(COMMIT_HASH)'" > frigate/version.py

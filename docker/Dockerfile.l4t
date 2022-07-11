@@ -1,0 +1,120 @@
+ARG FRIGATE_BASE_IMAGE=debian:11-slim
+ARG FRIGATE_VERSION=latest
+
+FROM frigate-wheels-l4t:${FRIGATE_VERSION} as wheels_l4t
+FROM blakeblackshear/frigate-nginx:1.0.2 as nginx
+
+FROM frigate-web:${FRIGATE_VERSION} as web
+FROM frigate-wheels:${FRIGATE_VERSION} as wheels
+
+FROM cptnalf/ffmpeg-l4t:4.3.2-r32.7.1 as ffmpeg_src
+
+# Frigate Container
+FROM ${FRIGATE_BASE_IMAGE}
+ARG TARGETARCH
+ARG PYTHON_MINOR_VERSION=8
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV FLASK_ENV=development
+
+#RUN apt-get -qq update && apt-get -qq install --no-install-recommends -y ffmpeg
+
+# install gstreamer
+RUN \
+  apt-get update && apt-get install -y gstreamer1.0-plugins-base-apps gstreamer1.0-tools gstreamer1.0-alsa \
+    gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly \
+    ibgstreamer1.0-dev \
+    libgstreamer-plugins-base1.0-dev \
+    libgstreamer-plugins-good1.0-dev \
+    libgstreamer-plugins-bad1.0-dev
+
+RUN apt-get -qq update \
+    && apt-get -qq install -y python3.${PYTHON_MINOR_VERSION} \
+    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.${PYTHON_MINOR_VERSION} 1
+
+# Install ffmpeg
+RUN apt-get -qq update \
+    && apt-get -qq install --no-install-recommends -y \
+    apt-transport-https \
+    gnupg \
+    wget \
+    unzip tzdata libxml2 xz-utils \
+    python3-pip \
+    libjpeg9 \
+    zlib1g \
+    libtiff5 \
+    && apt-get -y -qq remove python3-pil python3-pil.imagetk \
+    # add raspberry pi repo
+    #&& wget -O - http://archive.raspberrypi.org/debian/raspberrypi.gpg.key | apt-key add - \
+    #&& echo "deb http://archive.raspberrypi.org/debian/ bullseye main" | tee /etc/apt/sources.list.d/raspi.list \
+    # add coral repo
+    && APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=DontWarn apt-key adv --fetch-keys https://packages.cloud.google.com/apt/doc/apt-key.gpg \
+    && echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" > /etc/apt/sources.list.d/coral-edgetpu.list \
+    && echo "libedgetpu1-max libedgetpu/accepted-eula select true" | debconf-set-selections \
+    && apt-get -qq update \
+    && apt-get -qq install --no-install-recommends -y \
+    # coral drivers
+    libedgetpu1-max python3-tflite-runtime python3-pycoral 
+    #\
+    #&&
+COPY --from=wheels_l4t /wheels/. /wheels/
+RUN pip3 install -U /wheels/*.whl \
+    && rm -rf /wheels
+
+COPY --from=wheels /wheels /wheels
+RUN pip3 install -U /wheels/*.whl \
+    && rm -rf /wheels
+
+RUN rm -rf /var/lib/apt/lists/* /wheels \
+    && (apt-get autoremove -y; apt-get autoclean -y)
+
+COPY --from=ffmpeg_src /usr/local /usr/local/
+RUN rm -f /usr/local/lib/libfribidi.so*
+
+# AMD64 specific packages
+RUN if [ "${TARGETARCH}" = "amd64" ]; \
+    then \
+    wget -qO - https://repositories.intel.com/graphics/intel-graphics.key | apt-key add - \
+    && echo 'deb [arch=amd64] https://repositories.intel.com/graphics/ubuntu focal main' > /etc/apt/sources.list.d/intel-graphics.list \
+    && apt-get -qq update \
+    && apt-get -qq install --no-install-recommends -y \
+    # VAAPI drivers for Intel hardware accel
+    libva-drm2 libva2 libmfx1 i965-va-driver vainfo intel-media-va-driver-non-free mesa-vdpau-drivers mesa-va-drivers mesa-vdpau-drivers libdrm-radeon1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && (apt-get autoremove -y; apt-get autoclean -y) \
+    fi
+    
+COPY --from=nginx /usr/local/nginx/ /usr/local/nginx/
+
+# get model and labels
+COPY labelmap.txt /labelmap.txt
+RUN wget -q https://github.com/google-coral/test_data/raw/release-frogfish/ssdlite_mobiledet_coco_qat_postprocess_edgetpu.tflite -O /edgetpu_model.tflite
+RUN wget -q https://github.com/google-coral/test_data/raw/release-frogfish/ssdlite_mobiledet_coco_qat_postprocess.tflite -O /cpu_model.tflite
+
+WORKDIR /opt/frigate/
+
+# copy the frigate python source over.
+ADD frigate frigate/
+ADD migrations migrations/
+
+COPY --from=web /opt/frigate/dist web/
+
+COPY docker/rootfs/ /
+
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+ADD .l4t_assets /yolo4/
+
+# s6-overlay
+RUN S6_ARCH="${TARGETARCH}" \
+    && if [ "${TARGETARCH}" = "amd64" ]; then S6_ARCH="amd64"; fi \
+    && if [ "${TARGETARCH}" = "arm64" ]; then S6_ARCH="aarch64"; fi \
+    && wget -O /tmp/s6-overlay-installer "https://github.com/just-containers/s6-overlay/releases/download/v2.2.0.3/s6-overlay-${S6_ARCH}-installer" \
+    && chmod +x /tmp/s6-overlay-installer && /tmp/s6-overlay-installer /
+
+EXPOSE 5000
+EXPOSE 1935
+
+ENTRYPOINT ["/init"]
+
+CMD ["python3", "-u", "-m", "frigate"]
