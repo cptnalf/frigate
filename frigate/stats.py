@@ -12,6 +12,10 @@ from frigate.version import VERSION
 
 logger = logging.getLogger(__name__)
 
+# cache disk partition information
+# this really should not change while we're running.
+# sizes can, but this call only pulls disk type info
+disk_partitions = []
 
 def stats_init(camera_metrics, detectors):
     stats_tracking = {
@@ -19,13 +23,18 @@ def stats_init(camera_metrics, detectors):
         "detectors": detectors,
         "started": int(time.time()),
     }
+
+    global disk_partitions
+    disk_partitions = psutil.disk_partitions(all=True)
     return stats_tracking
 
 
 def get_fs_type(path):
     bestMatch = ""
     fsType = ""
-    for part in psutil.disk_partitions(all=True):
+    global disk_partitions
+
+    for part in disk_partitions: #psutil.disk_partitions(all=True):
         if path.startswith(part.mountpoint) and len(bestMatch) < len(part.mountpoint):
             fsType = part.fstype
             bestMatch = part.mountpoint
@@ -95,7 +104,7 @@ def stats_snapshot(stats_tracking):
             "free": round(storage_stats.free / 1000000, 1),
             "mount_type": get_fs_type(path),
         }
-
+    
     return stats
 
 
