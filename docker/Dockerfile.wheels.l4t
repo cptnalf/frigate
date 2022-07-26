@@ -1,4 +1,4 @@
-FROM cptnalf/ubuntu-l4t:focal-r32.7.1
+FROM cptnalf/jetson-ubuntu:focal-r32.7.1
 
 ARG PYTHON_MINOR_VERSION=8
 

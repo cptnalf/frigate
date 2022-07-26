@@ -46,7 +46,7 @@ l4t_wheels.built:
 	@docker image inspect -f "h" frigate-wheels-l4t:$(FRIGATE_VERSION) >/dev/null
 
 l4t_frigate: l4t_wheels.built l4t_assets docker/Dockerfile.l4t web.built frigate.built
-	DOCKER_BUILDKIT=1 docker build --progress=plain -t frigate.l4t:$(FRIGATE_VERSION) --build-arg FRIGATE_BASE_IMAGE=cptnalf/ubuntu-l4t-opencv:4.5.0-r32.7.1 --build-arg FRIGATE_VERSION=$(FRIGATE_VERSION) -f docker/Dockerfile.l4t .
+	DOCKER_BUILDKIT=1 docker build --progress=plain -t frigate.l4t:$(FRIGATE_VERSION) --build-arg FRIGATE_BASE_IMAGE=cptnalf/jetson-ubuntu-opencv:4.5.0-r32.7.1 --build-arg FRIGATE_VERSION=$(FRIGATE_VERSION) -f docker/Dockerfile.l4t .
 
 frigate: version
 	DOCKER_BUILDKIT=1 docker build --progress=plain -t frigate -f docker/Dockerfile .

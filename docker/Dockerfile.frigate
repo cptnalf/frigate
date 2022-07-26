@@ -1,6 +1,6 @@
 # debian:11 has python 3.9 as it's base.
 # ubuntu20-base uses 3.8.
-FROM cptnalf/ubuntu-l4t:focal-r32.7.1 as wheels
+FROM cptnalf/jetson-ubuntu:focal-r32.7.1 as wheels
 
 ENV DEBIAN_FRONTEND=noninteractive
 

@@ -7,7 +7,7 @@ FROM blakeblackshear/frigate-nginx:1.0.2 as nginx
 FROM frigate-web:${FRIGATE_VERSION} as web
 FROM frigate-wheels:${FRIGATE_VERSION} as wheels
 
-FROM cptnalf/ffmpeg-l4t:4.3.2-r32.7.1 as ffmpeg_src
+FROM cptnalf/jetson-ffmpeg:4.3.2-r32.7.1 as ffmpeg_src
 
 # Frigate Container
 FROM ${FRIGATE_BASE_IMAGE}
