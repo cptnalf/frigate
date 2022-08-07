@@ -21,7 +21,7 @@ from pydantic import ValidationError
 
 from frigate.config import DetectorTypeEnum, FrigateConfig
 from frigate.const import CACHE_DIR, CLIPS_DIR, RECORD_DIR
-from frigate.edgetpu import EdgeTPUProcess
+from frigate.object_detection import ObjectDetectProcess
 from frigate.events import EventCleanup, EventProcessor
 from frigate.http import create_app
 from frigate.log import log_process, root_configurer
@@ -44,7 +44,7 @@ class FrigateApp:
     def __init__(self) -> None:
         self.stop_event: Event = mp.Event()
         self.detection_queue: Queue = mp.Queue()
-        self.detectors: dict[str, EdgeTPUProcess] = {}
+        self.detectors: dict[str, ObjectDetectProcess] = {}
         self.detection_out_events: dict[str, Event] = {}
         self.detection_shms: list[mp.shared_memory.SharedMemory] = []
         self.log_queue: Queue = mp.Queue()
@@ -204,7 +204,7 @@ class FrigateApp:
 
         for name, detector in self.config.detectors.items():
             if detector.type == DetectorTypeEnum.cpu:
-                self.detectors[name] = EdgeTPUProcess(
+                self.detectors[name] = ObjectDetectProcess(
                     name,
                     self.detection_queue,
                     self.detection_out_events,
@@ -214,7 +214,7 @@ class FrigateApp:
                     detector.num_threads,
                 )
             if detector.type == DetectorTypeEnum.edgetpu:
-                self.detectors[name] = EdgeTPUProcess(
+                self.detectors[name] = ObjectDetectProcess(
                     name,
                     self.detection_queue,
                     self.detection_out_events,
