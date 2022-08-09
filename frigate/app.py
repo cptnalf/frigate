@@ -210,6 +210,7 @@ class FrigateApp:
                     self.detection_out_events,
                     model_path,
                     model_shape,
+                    detector.type,
                     "cpu",
                     detector.num_threads,
                 )
@@ -220,6 +221,7 @@ class FrigateApp:
                     self.detection_out_events,
                     model_path,
                     model_shape,
+                    detector.type,
                     detector.device,
                     detector.num_threads,
                 )
