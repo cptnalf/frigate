@@ -178,8 +178,6 @@ class FrigateApp:
         self.mqtt_relay.start()
 
     def start_detectors(self) -> None:
-        model_path = self.config.model.path
-        model_shape = (self.config.model.height, self.config.model.width)
         for name in self.config.cameras.keys():
             self.detection_out_events[name] = mp.Event()
 
@@ -207,8 +205,7 @@ class FrigateApp:
                 name,
                 self.detection_queue,
                 self.detection_out_events,
-                model_path,
-                model_shape,
+                self.config.model,
                 detector.type,
                 detector.device,
                 detector.num_threads,
@@ -243,7 +240,6 @@ class FrigateApp:
         logger.info(f"Output process started: {output_processor.pid}")
 
     def start_camera_processors(self) -> None:
-        model_shape = (self.config.model.height, self.config.model.width)
         for name, config in self.config.cameras.items():
             camera_process = mp.Process(
                 target=track_camera,
@@ -251,7 +247,7 @@ class FrigateApp:
                 args=(
                     name,
                     config,
-                    model_shape,
+                    self.config.model,
                     self.config.model.merged_labelmap,
                     self.detection_queue,
                     self.detection_out_events[name],
