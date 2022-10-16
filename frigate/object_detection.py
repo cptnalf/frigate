@@ -13,6 +13,7 @@ from setproctitle import setproctitle
 from frigate.config import DetectorTypeEnum
 from frigate.detectors.edgetpu_tfl import EdgeTpuTfl
 from frigate.detectors.cpu_tfl import CpuTfl
+from frigate.detectors.tensorrt import TensorRT
 
 from frigate.util import EventsPerSecond, SharedMemoryFrameManager, listen, load_labels
 
@@ -52,6 +53,7 @@ class LocalObjectDetector(ObjectDetector):
         else:
             self.labels = load_labels(labels)
 
+        ### TODO: does this need to maybe checkin with the type first?
         if model_config:
             self.input_transform = tensor_transform(model_config.input_tensor)
         else:
@@ -61,6 +63,11 @@ class LocalObjectDetector(ObjectDetector):
             self.detect_api = EdgeTpuTfl(
                 det_device=det_device, model_config=model_config
             )
+        elif det_type == DetectorTypeEnum.tensorrt:
+            self.detect_api = TensorRT(
+                det_device=det_device, model_config=model_config
+            )
+
         else:
             logger.warning(
                 "CPU detectors are not recommended and should only be used for testing or for trial purposes."
